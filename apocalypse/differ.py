@@ -10,7 +10,7 @@ class DexDiffer:
     def filter_class(cls: lief.DEX.Class) -> bool:
         return True
     
-    def __init__(self, passes=2, class_filtering_function=None, encoder=DefaultEncoder):
+    def __init__(self, passes=5, class_filtering_function=None, encoder=DefaultEncoder):
         self._passes = passes
         if class_filtering_function is None:
             class_filtering_function = self.filter_class

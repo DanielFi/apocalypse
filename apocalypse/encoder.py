@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from collections import defaultdict
 
 import lief.DEX
 
@@ -24,16 +25,28 @@ class Encoder(ABC):
 
 class DefaultEncoder(Encoder):
 
+    def __init__(self):
+        super().__init__()
+
+        self._old_inheritance = defaultdict(list)
+        self._new_inheritance = defaultdict(list)
+
     def encode_old_class(self, cls: lief.DEX.Class):
+        if cls.has_parent and cls.fullname not in self._old_inheritance[cls.parent.fullname]:
+            self._old_inheritance[cls.parent.fullname].append(cls.fullname)
+
         if cls.fullname in self._mapping:
             return self._mapping[cls.fullname]
-        
+
         return self._encode_class(cls, True)
     
     def encode_new_class(self, cls: lief.DEX.Class):
+        if cls.has_parent and cls.fullname not in self._new_inheritance[cls.parent.fullname]:
+            self._new_inheritance[cls.parent.fullname].append(cls.fullname)
+
         if cls.fullname in self._reverse_mapping:
             return cls.fullname
-        
+
         return self._encode_class(cls, False)
 
     def _encode_class(self, cls: lief.DEX.Class, old: bool):
@@ -82,6 +95,15 @@ class DefaultEncoder(Encoder):
         
         encoding += '$'
 
+        inheritance = self._old_inheritance if old else self._new_inheritance
+        for child in sorted(inheritance[cls.fullname]):
+            if child in mapping:
+                if old:
+                    encoding += mapping[child]
+                else:
+                    encoding += child
+                encoding += '$'
+
         encoding += str(sum(int(flag) for flag in cls.access_flags)) + ','
         encoding += cls.package_name
 
@@ -89,7 +111,7 @@ class DefaultEncoder(Encoder):
             encoding += '|'
 
             if len(method.name) > 3:
-                encoding += method.name + '!'
+                encoding += '.'.join(method.name.split('$')[:2]) + '!'
 
             prototype = [get_type_representation(t) for t in method.prototype.parameters_type]
             prototype.append(get_type_representation(method.prototype.return_type))
@@ -99,5 +121,7 @@ class DefaultEncoder(Encoder):
 
             encoding += str(sum(int(flag) for flag in method.access_flags)) + ','
             encoding += str(len(method.bytecode))
+            if method.bytecode:
+                encoding += ':' + str(method.bytecode[0])
         
         return encoding
