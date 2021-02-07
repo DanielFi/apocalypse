@@ -25,9 +25,15 @@ class Encoder(ABC):
 class DefaultEncoder(Encoder):
 
     def encode_old_class(self, cls: lief.DEX.Class):
+        if cls.fullname in self._mapping:
+            return self._mapping[cls.fullname]
+        
         return self._encode_class(cls, True)
     
     def encode_new_class(self, cls: lief.DEX.Class):
+        if cls.fullname in self._reverse_mapping:
+            return cls.fullname
+        
         return self._encode_class(cls, False)
 
     def _encode_class(self, cls: lief.DEX.Class, old: bool):
@@ -35,6 +41,8 @@ class DefaultEncoder(Encoder):
             return cls.fullname
         
         types = [cls.fullname]
+
+        mapping = self._mapping if old else self._reverse_mapping
 
         def get_type_representation(type_: lief.DEX.Type):
             representation = ''
@@ -46,9 +54,9 @@ class DefaultEncoder(Encoder):
             if type_.type == lief.DEX.Type.TYPES.PRIMITIVE:
                 representation += type_.value.name
             else:
-                if old and type_.value.fullname in self._mapping:
-                    return self._mapping[type_.value.fullname]
-                elif not old and type_.value.fullname in self._reverse_mapping:
+                if old and type_.value.fullname in mapping:
+                    return mapping[type_.value.fullname]
+                elif not old and type_.value.fullname in mapping:
                     return type_.value.fullname
 
                 if type_.value.fullname in types:
@@ -62,10 +70,11 @@ class DefaultEncoder(Encoder):
         encoding = ''
         
         if cls.has_parent:
-            if old and cls.parent.fullname in self._mapping:
-                encoding += self._mapping[cls.parent.fullname]
-            elif not old and cls.parent.fullname in self._reverse_mapping:
-                encoding += cls.parent.fullname
+            if cls.parent.fullname in mapping:
+                if old:
+                    encoding += mapping[cls.parent.fullname]
+                else:
+                    encoding += cls.parent.fullname
             elif len(cls.parent.package_name) > 3:
                 encoding += cls.parent.fullname
             else:
