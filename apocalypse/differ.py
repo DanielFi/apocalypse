@@ -1,6 +1,7 @@
 import lief.DEX
 
 from .heckel_diff import diff as heckel_diff
+from .encoder import Encoder, DefaultEncoder
 
 
 class DexDiffer:
@@ -8,69 +9,12 @@ class DexDiffer:
     @staticmethod
     def filter_class(cls: lief.DEX.Class) -> bool:
         return True
-
-    @staticmethod
-    def encode_class(cls: lief.DEX.Class):
-        if len(cls.package_name) > 3 or len(cls.fullname) == 1:
-            return cls.fullname
-        
-        types = [cls.fullname]
-
-        def get_type_representation(type_: lief.DEX.Type):
-            representation = ''
-
-            if type(type_.value) is list:
-                representation += '['
-                type_ = type_.underlying_array_type
-            
-            if type_.type == lief.DEX.Type.TYPES.PRIMITIVE:
-                representation += type_.value.name
-            else:
-                if type_.value.fullname in types:
-                    representation += str(types.index(type_.value.fullname))
-                else:
-                    types.append(type_.value.fullname)
-                    representation += str(len(types) - 1)
-            
-            return representation
-
-        encoding = ''
-        
-        if cls.has_parent:
-            if len(cls.parent.package_name) > 3:
-                encoding += cls.parent.fullname
-            else:
-                encoding += '_'
-        
-        encoding += '$'
-
-        encoding += str(sum(int(flag) for flag in cls.access_flags)) + ','
-        encoding += cls.package_name
-
-        for method in cls.methods:
-            encoding += '|'
-
-            if len(method.name) > 3:
-                encoding += method.name + '!'
-
-            prototype = [get_type_representation(t) for t in method.prototype.parameters_type]
-            prototype.append(get_type_representation(method.prototype.return_type))
-
-            for type_representation in prototype:
-                encoding += type_representation + ','
-
-            encoding += str(sum(int(flag) for flag in method.access_flags)) + ','
-            encoding += str(len(method.bytecode))
-        
-        return encoding
     
-    def __init__(self, class_filtering_function=None, class_encoding_function=None):
+    def __init__(self, class_filtering_function=None, encoder=DefaultEncoder):
         if class_filtering_function is None:
             class_filtering_function = self.filter_class
         self._class_filtering_function = class_filtering_function
-        if class_encoding_function is None:
-            class_encoding_function = self.encode_class
-        self._class_encoding_function = class_encoding_function
+        self._encoder = DefaultEncoder()
     
     def diff(self, old_dex_path: str, new_dex_path: str):
         print('parsing DEXs... ')
@@ -86,8 +30,8 @@ class DexDiffer:
         print(f'filtered classes: {len(old_dex_classes)} -> {len(new_dex_classes)}')
 
         print('encoding DEXs...')
-        old_dex_encoding = [self._class_encoding_function(cls) for cls in old_dex_classes]
-        new_dex_encoding = [self._class_encoding_function(cls) for cls in new_dex_classes]
+        old_dex_encoding = [self._encoder.encode_old_class(cls) for cls in old_dex_classes]
+        new_dex_encoding = [self._encoder.encode_new_class(cls) for cls in new_dex_classes]
 
         # print(old_dex_encoding[6000])
 
