@@ -15,7 +15,7 @@ class DexDiffer:
         if class_filtering_function is None:
             class_filtering_function = self.filter_class
         self._class_filtering_function = class_filtering_function
-        self._encoder = DefaultEncoder()
+        self._encoder = encoder()
     
     def diff(self, old_dex_path: str, new_dex_path: str):
         print('parsing DEXs... ')
