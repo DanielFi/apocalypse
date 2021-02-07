@@ -10,7 +10,8 @@ class DexDiffer:
     def filter_class(cls: lief.DEX.Class) -> bool:
         return True
     
-    def __init__(self, class_filtering_function=None, encoder=DefaultEncoder):
+    def __init__(self, passes=2, class_filtering_function=None, encoder=DefaultEncoder):
+        self._passes = passes
         if class_filtering_function is None:
             class_filtering_function = self.filter_class
         self._class_filtering_function = class_filtering_function
@@ -29,18 +30,24 @@ class DexDiffer:
 
         print(f'filtered classes: {len(old_dex_classes)} -> {len(new_dex_classes)}')
 
-        print('encoding DEXs...')
-        old_dex_encoding = [self._encoder.encode_old_class(cls) for cls in old_dex_classes]
-        new_dex_encoding = [self._encoder.encode_new_class(cls) for cls in new_dex_classes]
+        for i in range(self._passes):
+            print(f'performing pass #{i + 1}:')
 
-        # print(old_dex_encoding[6000])
+            print('encoding DEXs...')
+            old_dex_encoding = [self._encoder.encode_old_class(cls) for cls in old_dex_classes]
+            new_dex_encoding = [self._encoder.encode_new_class(cls) for cls in new_dex_classes]
 
-        print('performing diff...')
-        mapping, reverse_mapping = heckel_diff(old_dex_encoding, new_dex_encoding)
+            # print(old_dex_encoding[6000])
 
-        for i in range(len(old_dex_classes)):
-            if i not in mapping and i % 100 == 0:
-                print('unmatched: ', old_dex_classes[i].fullname)
+            print('performing diff...')
+            mapping, reverse_mapping = heckel_diff(old_dex_encoding, new_dex_encoding)
+
+            mapping = {old_dex_classes[i].fullname: new_dex_classes[mapping[i]].fullname for i in mapping}
+            reverse_mapping = {new_dex_classes[i].fullname: old_dex_classes[reverse_mapping[i]].fullname for i in reverse_mapping}
+
+            self._encoder.set_mapping(mapping, reverse_mapping)
+
+            print(f'pass #{i + 1} resulted in {len(mapping)} mappings')
 
         return mapping
     
