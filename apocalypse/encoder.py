@@ -57,7 +57,7 @@ class DefaultEncoder(Encoder):
 
         mapping = self._mapping if old else self._reverse_mapping
 
-        def get_type_representation(type_: lief.DEX.Type):
+        def encode_type(type_: lief.DEX.Type):
             representation = ''
 
             if type(type_.value) is list:
@@ -79,6 +79,17 @@ class DefaultEncoder(Encoder):
                     representation += str(len(types) - 1)
             
             return representation
+        
+        def encode_method_signature(method: lief.DEX.Method):
+            result = ''
+            
+            if len(method.name) > 4:
+                result += '.'.join(method.name.split('$')[:2]) + '!'
+
+            prototype = [encode_type(t) for t in method.prototype.parameters_type]
+            prototype.append(encode_type(method.prototype.return_type))
+
+            return result + ','.join(prototype)
 
         encoding = ''
         
@@ -95,6 +106,9 @@ class DefaultEncoder(Encoder):
         
         encoding += '$'
 
+        # inheritance might be too volatile as part of the encoding since 
+        # removed subclasses will cause the parent to not match. 
+        # TODO move this to the granular diff search (once it exists)
         inheritance = self._old_inheritance if old else self._new_inheritance
         for child in sorted(inheritance[cls.fullname]):
             if child in mapping:
@@ -102,7 +116,7 @@ class DefaultEncoder(Encoder):
                     encoding += mapping[child]
                 else:
                     encoding += child
-                encoding += '$'
+                encoding += '^'
 
         encoding += str(sum(int(flag) for flag in cls.access_flags)) + ','
         encoding += cls.package_name
@@ -110,14 +124,7 @@ class DefaultEncoder(Encoder):
         for method in cls.methods:
             encoding += '|'
 
-            if len(method.name) > 3:
-                encoding += '.'.join(method.name.split('$')[:2]) + '!'
-
-            prototype = [get_type_representation(t) for t in method.prototype.parameters_type]
-            prototype.append(get_type_representation(method.prototype.return_type))
-
-            for type_representation in prototype:
-                encoding += type_representation + ','
+            encoding += encode_method_signature(method) + ','
 
             encoding += str(sum(int(flag) for flag in method.access_flags)) + ','
             encoding += str(len(method.bytecode))
