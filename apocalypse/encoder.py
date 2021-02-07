@@ -25,12 +25,12 @@ class Encoder(ABC):
 class DefaultEncoder(Encoder):
 
     def encode_old_class(self, cls: lief.DEX.Class):
-        return self._encode_class(cls)
+        return self._encode_class(cls, True)
     
     def encode_new_class(self, cls: lief.DEX.Class):
-        return self._encode_class(cls)
+        return self._encode_class(cls, False)
 
-    def _encode_class(self, cls: lief.DEX.Class):
+    def _encode_class(self, cls: lief.DEX.Class, old: bool):
         if len(cls.package_name) > 3 or len(cls.fullname) == 1:
             return cls.fullname
         
@@ -46,6 +46,11 @@ class DefaultEncoder(Encoder):
             if type_.type == lief.DEX.Type.TYPES.PRIMITIVE:
                 representation += type_.value.name
             else:
+                if old and type_.value.fullname in self._mapping:
+                    return self._mapping[type_.value.fullname]
+                elif not old and type_.value.fullname in self._reverse_mapping:
+                    return type_.value.fullname
+
                 if type_.value.fullname in types:
                     representation += str(types.index(type_.value.fullname))
                 else:
@@ -57,7 +62,11 @@ class DefaultEncoder(Encoder):
         encoding = ''
         
         if cls.has_parent:
-            if len(cls.parent.package_name) > 3:
+            if old and cls.parent.fullname in self._mapping:
+                encoding += self._mapping[cls.parent.fullname]
+            elif not old and cls.parent.fullname in self._reverse_mapping:
+                encoding += cls.parent.fullname
+            elif len(cls.parent.package_name) > 3:
                 encoding += cls.parent.fullname
             else:
                 encoding += '_'
