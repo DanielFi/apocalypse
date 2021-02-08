@@ -39,8 +39,6 @@ class DexDiffer:
             old_dex_encoding = [self._encoder.encode_old_class(cls) for cls in old_dex_classes]
             new_dex_encoding = [self._encoder.encode_new_class(cls) for cls in new_dex_classes]
 
-            # print(old_dex_encoding[6000])
-
             print('performing diff...')
             mapping, reverse_mapping = heckel_diff(old_dex_encoding, new_dex_encoding)
 
