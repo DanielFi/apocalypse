@@ -28,22 +28,13 @@ class DefaultEncoder(Encoder):
     def __init__(self):
         super().__init__()
 
-        self._old_inheritance = defaultdict(list)
-        self._new_inheritance = defaultdict(list)
-
     def encode_old_class(self, cls: lief.DEX.Class):
-        if cls.has_parent and cls.fullname not in self._old_inheritance[cls.parent.fullname]:
-            self._old_inheritance[cls.parent.fullname].append(cls.fullname)
-
         if cls.fullname in self._mapping:
             return self._mapping[cls.fullname]
 
         return self._encode_class(cls, True)
     
     def encode_new_class(self, cls: lief.DEX.Class):
-        if cls.has_parent and cls.fullname not in self._new_inheritance[cls.parent.fullname]:
-            self._new_inheritance[cls.parent.fullname].append(cls.fullname)
-
         if cls.fullname in self._reverse_mapping:
             return cls.fullname
 
@@ -105,18 +96,6 @@ class DefaultEncoder(Encoder):
                 encoding += '_'
         
         encoding += '$'
-
-        # inheritance might be too volatile as part of the encoding since 
-        # removed subclasses will cause the parent to not match. 
-        # TODO move this to the granular diff search (once it exists)
-        inheritance = self._old_inheritance if old else self._new_inheritance
-        for child in sorted(inheritance[cls.fullname]):
-            if child in mapping:
-                if old:
-                    encoding += mapping[child]
-                else:
-                    encoding += child
-                encoding += '^'
 
         encoding += str(sum(int(flag) for flag in cls.access_flags)) + ','
         encoding += cls.package_name
