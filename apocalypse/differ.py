@@ -1,7 +1,12 @@
+import logging
+
 import lief.DEX
 
 from .heckel_diff import diff as heckel_diff
 from .encoder import Encoder, DefaultEncoder
+
+
+logger = logging.getLogger(__name__)
 
 
 class DexDiffer:
@@ -18,28 +23,22 @@ class DexDiffer:
         self._encoder = encoder()
     
     def diff(self, old_dex_path: str, new_dex_path: str):
-        print('parsing DEXs... ')
         old_dex = lief.DEX.parse(old_dex_path)
         new_dex = lief.DEX.parse(new_dex_path)
 
-        print(f'total classes: {len(old_dex.classes)} -> {len(new_dex.classes)}')
+        logger.info(f'total classes: {len(old_dex.classes)} -> {len(new_dex.classes)}')
 
-        print('filtering classes...')
         old_dex_classes = [cls for cls in sorted(old_dex.classes, key=lambda c: c.index) if self._class_filtering_function(cls)]
         new_dex_classes = [cls for cls in sorted(new_dex.classes, key=lambda c: c.index) if self._class_filtering_function(cls)]
 
-        print(f'filtered classes: {len(old_dex_classes)} -> {len(new_dex_classes)}')
+        logger.info(f'filtered classes: {len(old_dex_classes)} -> {len(new_dex_classes)}')
 
         successful_mappings = 0
 
         for i in range(self._passes):
-            print(f'performing pass #{i + 1}:')
-
-            print('encoding DEXs...')
             old_dex_encoding = [self._encoder.encode_old_class(cls) for cls in old_dex_classes]
             new_dex_encoding = [self._encoder.encode_new_class(cls) for cls in new_dex_classes]
 
-            print('performing diff...')
             mapping, reverse_mapping = heckel_diff(old_dex_encoding, new_dex_encoding)
 
             mapping = {old_dex_classes[i].fullname: new_dex_classes[mapping[i]].fullname for i in mapping}
@@ -47,10 +46,10 @@ class DexDiffer:
 
             self._encoder.set_mapping(mapping, reverse_mapping)
 
-            print(f'pass #{i + 1} resulted in {len(mapping)} mappings')
+            logger.info(f'pass #{i + 1} resulted in {len(mapping)} mappings')
 
             if len(mapping) == successful_mappings:
-                print('breaking early since no progress is being made')
+                logger.info('breaking early since no progress is being made')
                 break
 
             successful_mappings = len(mapping)
