@@ -30,6 +30,8 @@ class DexDiffer:
 
         print(f'filtered classes: {len(old_dex_classes)} -> {len(new_dex_classes)}')
 
+        successful_mappings = 0
+
         for i in range(self._passes):
             print(f'performing pass #{i + 1}:')
 
@@ -48,6 +50,12 @@ class DexDiffer:
             self._encoder.set_mapping(mapping, reverse_mapping)
 
             print(f'pass #{i + 1} resulted in {len(mapping)} mappings')
+
+            if len(mapping) == successful_mappings:
+                print('breaking early since no progress is being made')
+                break
+
+            successful_mappings = len(mapping)
 
         return mapping
     
