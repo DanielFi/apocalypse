@@ -25,8 +25,8 @@ class DexDiffer:
         print(f'total classes: {len(old_dex.classes)} -> {len(new_dex.classes)}')
 
         print('filtering classes...')
-        old_dex_classes = [cls for cls in old_dex.classes if self._class_filtering_function(cls)]
-        new_dex_classes = [cls for cls in new_dex.classes if self._class_filtering_function(cls)]
+        old_dex_classes = [cls for cls in sorted(old_dex.classes, key=lambda c: c.index) if self._class_filtering_function(cls)]
+        new_dex_classes = [cls for cls in sorted(new_dex.classes, key=lambda c: c.index) if self._class_filtering_function(cls)]
 
         print(f'filtered classes: {len(old_dex_classes)} -> {len(new_dex_classes)}')
 
