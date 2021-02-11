@@ -34,6 +34,7 @@ class DexDiffer:
         logger.info(f'filtered classes: {len(old_dex_classes)} -> {len(new_dex_classes)}')
 
         successful_mappings = 0
+        self._encoder.set_mapping({}, {})
 
         for i in range(self._passes):
             old_dex_encoding = [self._encoder.encode_old_class(cls) for cls in old_dex_classes]
