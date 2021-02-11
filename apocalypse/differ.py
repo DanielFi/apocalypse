@@ -55,5 +55,5 @@ class DexDiffer:
 
             successful_mappings = len(mapping)
 
-        return mapping
+        return mapping, reverse_mapping
     
