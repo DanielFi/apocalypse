@@ -9,7 +9,7 @@ import json
 from apocalypse.differ import DexDiffer
 
 
-DEXS_FOLDER = 'dexs'
+SOURCES_FOLDER = 'sources'
 DIFF_FOLDER = 'diffs'
 
 
@@ -17,15 +17,15 @@ logger = logging.getLogger(__name__)
 
 
 def in_timeline():
-    return Path(DEXS_FOLDER).is_dir() and Path(DIFF_FOLDER).is_dir()
+    return Path(SOURCES_FOLDER).is_dir() and Path(DIFF_FOLDER).is_dir()
 
 def init(name):
     root = Path(name)
     root.mkdir()
-    (root / DEXS_FOLDER).mkdir()
+    (root / SOURCES_FOLDER).mkdir()
     (root / DIFF_FOLDER).mkdir()
 
-def insert_version(version, dex_path, force=False, compute_maps=True):
+def insert_version(version, file_path, force=False, compute_maps=True):
     if not in_timeline():
         logger.error('Not in a timeline. ')
         return
@@ -34,14 +34,14 @@ def insert_version(version, dex_path, force=False, compute_maps=True):
         logger.error(f"'{version}' is not a valid version")
         return
 
-    if (Path(DEXS_FOLDER) / version).is_file():
+    if (Path(SOURCES_FOLDER) / version).is_file():
         if not force:
             logger.error(f'Version {version} already exists. \nUse --force to override. ')
             return
         else:
-            (Path(DEXS_FOLDER) / version).unlink()
+            (Path(SOURCES_FOLDER) / version).unlink()
 
-    shutil.copy(dex_path, Path(DEXS_FOLDER) / version)
+    shutil.copy(file_path, Path(SOURCES_FOLDER) / version)
 
     if compute_maps:
         previous_version = None
@@ -74,10 +74,10 @@ def map(version_from, version_to):
         logger.error(f"Can't map version {version_from} to itself")
         return
 
-    if not (Path(DEXS_FOLDER) / version_from).is_file():
+    if not (Path(SOURCES_FOLDER) / version_from).is_file():
         logger.error("Version {version_from} doesn't exist. ")
         return
-    if not (Path(DEXS_FOLDER) / version_to).is_file():
+    if not (Path(SOURCES_FOLDER) / version_to).is_file():
         logger.error(f"Version {version_to} doesn't exist. ")
         return
 
@@ -115,7 +115,7 @@ def until(version, class_name):
         logger.error('Not in a timeline. ')
         return 
        
-    if not (Path(DEXS_FOLDER) / version).is_file():
+    if not (Path(SOURCES_FOLDER) / version).is_file():
         logger.error("Version {version} doesn't exist. ")
         return
 
@@ -138,7 +138,7 @@ def since(version, class_name):
         logger.error('Not in a timeline. ')
         return 
        
-    if not (Path(DEXS_FOLDER) / version).is_file():
+    if not (Path(SOURCES_FOLDER) / version).is_file():
         logger.error("Version {version} doesn't exist. ")
         return
 
@@ -161,7 +161,7 @@ def versions():
         logger.error('Not in a timeline. ')
         return
 
-    return sorted((p.name for p in Path(DEXS_FOLDER).iterdir()), key=StrictVersion)
+    return sorted((p.name for p in Path(SOURCES_FOLDER).iterdir()), key=StrictVersion)
 
 def _is_version_valid(version):
     try:
@@ -172,7 +172,7 @@ def _is_version_valid(version):
 
 def _compute_maps(version_a, version_b):
     differ = DexDiffer()
-    map_from_previous, map_to_previous = differ.diff(str(Path(DEXS_FOLDER) / version_a), str(Path(DEXS_FOLDER) / version_b))
+    map_from_previous, map_to_previous = differ.diff(str(Path(SOURCES_FOLDER) / version_a), str(Path(SOURCES_FOLDER) / version_b))
 
     with open(Path(DIFF_FOLDER) / f'{version_a}-{version_b}', 'w') as f:
         json.dump(map_from_previous, f)

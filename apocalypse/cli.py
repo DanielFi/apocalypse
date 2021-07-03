@@ -2,7 +2,8 @@ import click
 import logging
 import json
 from pathlib import Path
-from apocalypse.differ import DexDiffer
+from apocalypse.dex_differ import DexDiffer
+from apocalypse.apk_differ import APKDiffer
 import apocalypse.timeline as timeline
 
 
@@ -21,13 +22,13 @@ def init(name: str):
 
 @main.command()
 @click.argument('version')
-@click.argument('dex', type=click.Path(exists=True))
+@click.argument('file', type=click.Path(exists=True))
 @click.option('-f', '--force', is_flag=True)
 @click.option('--compute/--no-compute', default=True)
-def insert(version: str, dex: str, force: bool, compute: bool):
+def insert(version: str, file: str, force: bool, compute: bool):
     """Insert a version into the timeline. 
     """
-    timeline.insert_version(version, dex, force, compute)
+    timeline.insert_version(version, file, force, compute)
 
 @main.command()
 def versions():
@@ -38,7 +39,7 @@ def versions():
         click.echo('\n'.join(result))
 
 @main.command()
-@click.option('--version/--dex', default=True, help='Chose whether to compare versions or dex files. ')
+@click.option('--version/--file', default=True, help='Chose whether to compare versions or files. ')
 @click.argument('from_', metavar='FROM')
 @click.argument('to')
 def map(from_: str, to: str, version: bool):
@@ -47,15 +48,26 @@ def map(from_: str, to: str, version: bool):
     if version:
         click.echo(timeline.map(from_, to))
     else:
-        if not Path(from_).is_file():
+        from_ = Path(from_)
+        if not from_.is_file():
             click.echo(f"Error: Invalid value for 'FROM': Path '{from_}' does not exist. \n")
             return
-        if not Path(to).is_file():
+        to = Path(to)
+        if not to.is_file():
             click.echo(f"Error: Invalid value for 'TO': Path '{to}' does not exist. \n")
             return
     
-        differ = DexDiffer()
-        mapping, _ = differ.diff(from_, to)
+        if from_.suffix != to.suffix:
+            click.echo(f"Error: Different file extensions for '{from_.as_posix()}' and '{to.as_posix()}'")
+            return
+        elif from_.suffix == '.dex':
+            differ = DexDiffer()
+        elif from_.suffix == '.apk':
+            differ = APKDiffer()
+        else:
+            click.echo(f"Error: Invalid file extension '{from_.suffix}'")
+            return
+        mapping, _ = differ.diff(from_.as_posix(), to.as_posix())
         click.echo(json.dumps(mapping))
 
 @main.command()
