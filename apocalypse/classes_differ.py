@@ -13,7 +13,7 @@ class ClassesDiffer:
 
     @staticmethod
     def filter_class(cls: lief.DEX.Class) -> bool:
-        return True
+        return cls.index != 4294967295  # filter out external classes
 
     def __init__(self, passes=5, class_filtering_function=None, encoder=DefaultEncoder):
         self._passes = passes
