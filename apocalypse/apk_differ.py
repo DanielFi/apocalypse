@@ -23,9 +23,9 @@ class APKDiffer:
     def filter_class(cls: lief.DEX.Class) -> bool:
         return True
 
-    def __init__(self, passes=5, class_filtering_function=None, encoder=DefaultEncoder):
+    def __init__(self, class_filtering_function=None, encoder=DefaultEncoder):
         self._classes_differ = ClassesDiffer(
-            passes, class_filtering_function, encoder)
+            class_filtering_function, encoder)
 
         # parsed dexs are stored while diffing is ongoing, in order to prevent GC which segfaults
         self._dexs = []

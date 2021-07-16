@@ -15,8 +15,7 @@ class ClassesDiffer:
     def filter_class(cls: lief.DEX.Class) -> bool:
         return cls.index != 4294967295  # filter out external classes
 
-    def __init__(self, passes=5, class_filtering_function=None, encoder=DefaultEncoder):
-        self._passes = passes
+    def __init__(self, class_filtering_function=None, encoder=DefaultEncoder):
         if class_filtering_function is None:
             class_filtering_function = self.filter_class
         self._class_filtering_function = class_filtering_function
@@ -32,11 +31,11 @@ class ClassesDiffer:
         successful_mappings = 0
         self._encoder.set_mapping({}, {})
 
-        for i in range(self._passes):
+        for i, precision in enumerate(self._encoder.get_stages()):
             old_encoding = [self._encoder.encode_old_class(
-                cls) for cls in old_classes]
+                cls, precision) for cls in old_classes]
             new_encoding = [self._encoder.encode_new_class(
-                cls) for cls in new_classes]
+                cls, precision) for cls in new_classes]
             
             mapping, reverse_mapping = heckel_diff(old_encoding, new_encoding)
 
