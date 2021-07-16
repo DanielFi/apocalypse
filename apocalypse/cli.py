@@ -15,10 +15,11 @@ def main(verbose):
 
 @main.command()
 @click.argument('name')
-def init(name: str):
+@click.option('--format', type=click.Choice(['APK', 'DEX']), default='APK')
+def init(name: str, format: str):
     """Initialize a new timeline. 
     """
-    timeline.init(name)
+    timeline.init(name, format)
 
 @main.command()
 @click.argument('version')

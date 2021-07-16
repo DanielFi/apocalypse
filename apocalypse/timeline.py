@@ -6,9 +6,12 @@ import logging
 
 import json
 
-from apocalypse.differ import DexDiffer
+from apocalypse.dex_differ import DexDiffer
+from apocalypse.apk_differ import APKDiffer
 
 
+
+CONFIG_FILE = 'timeline'
 SOURCES_FOLDER = 'sources'
 DIFF_FOLDER = 'diffs'
 
@@ -19,11 +22,28 @@ logger = logging.getLogger(__name__)
 def in_timeline():
     return Path(SOURCES_FOLDER).is_dir() and Path(DIFF_FOLDER).is_dir()
 
-def init(name):
+def get_config(key, default=None):
+    try:
+        with open(Path(CONFIG_FILE)) as f:
+            return json.load(f)[key]
+    except KeyError:
+        return default
+
+def put_config(key, value):
+    with open(Path(CONFIG_FILE), 'w') as f:
+        config = json.load(f)
+        config[key] = value
+        json.dump(config, f)
+
+def init(name, format):
     root = Path(name)
     root.mkdir()
     (root / SOURCES_FOLDER).mkdir()
     (root / DIFF_FOLDER).mkdir()
+    with open(root / CONFIG_FILE, 'w') as f:
+        json.dump({
+            'format': format
+        }, f)
 
 def insert_version(version, file_path, force=False, compute_maps=True):
     if not in_timeline():
@@ -171,7 +191,14 @@ def _is_version_valid(version):
         return False
 
 def _compute_maps(version_a, version_b):
-    differ = DexDiffer()
+    format = get_config('format')
+
+    if format == 'DEX':
+        differ = DexDiffer()
+    elif format == 'APK':
+        differ = APKDiffer()
+    else:
+        raise ValueError('Invalid format in config')
     map_from_previous, map_to_previous = differ.diff(str(Path(SOURCES_FOLDER) / version_a), str(Path(SOURCES_FOLDER) / version_b))
 
     with open(Path(DIFF_FOLDER) / f'{version_a}-{version_b}', 'w') as f:
