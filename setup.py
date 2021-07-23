@@ -3,7 +3,7 @@ from setuptools import setup
 
 setup(
     name='apocalypse',
-    version='0.3',
+    version='0.4',
     packages=['apocalypse'],
     install_requires=[
         'lief',

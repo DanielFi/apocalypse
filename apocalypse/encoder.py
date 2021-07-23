@@ -1,7 +1,15 @@
 from abc import ABC, abstractmethod
+from enum import IntEnum
 from collections import defaultdict
 
 import lief.DEX
+
+
+class Precision(IntEnum):
+
+        PERFECT = 0
+        IMPLEMENTATION_CHANGE = 1
+        API_CHANGE = 2
 
 
 class Encoder(ABC):
@@ -22,25 +30,29 @@ class Encoder(ABC):
     def encode_new_class(self, cls: lief.DEX.Class):
         pass
 
+    @abstractmethod
+    def get_stages(self):
+        pass
+
 
 class DefaultEncoder(Encoder):
 
     def __init__(self):
         super().__init__()
 
-    def encode_old_class(self, cls: lief.DEX.Class):
+    def encode_old_class(self, cls: lief.DEX.Class, precision: Precision = Precision.PERFECT):
         if cls.fullname in self._mapping:
             return self._mapping[cls.fullname]
 
-        return self._encode_class(cls, True)
+        return self._encode_class(cls, True, precision)
     
-    def encode_new_class(self, cls: lief.DEX.Class):
+    def encode_new_class(self, cls: lief.DEX.Class, precision: Precision = Precision.PERFECT):
         if cls.fullname in self._reverse_mapping:
             return cls.fullname
 
-        return self._encode_class(cls, False)
+        return self._encode_class(cls, False, precision)
 
-    def _encode_class(self, cls: lief.DEX.Class, old: bool):
+    def _encode_class(self, cls: lief.DEX.Class, old: bool, precision: Precision):
         if len(cls.package_name) > 3 or len(cls.fullname) == 1:
             return cls.fullname
         
@@ -77,8 +89,9 @@ class DefaultEncoder(Encoder):
             if len(method.name) > 4:
                 result += '.'.join(method.name.split('$')[:2]) + '!'
 
-            prototype = [encode_type(t) for t in method.prototype.parameters_type]
-            prototype.append(encode_type(method.prototype.return_type))
+            if precision < Precision.API_CHANGE:
+                prototype = [encode_type(t) for t in method.prototype.parameters_type]
+                prototype.append(encode_type(method.prototype.return_type))
 
             return result + ','.join(prototype)
 
@@ -106,8 +119,19 @@ class DefaultEncoder(Encoder):
             encoding += encode_method_signature(method) + ','
 
             encoding += str(sum(int(flag) for flag in method.access_flags)) + ','
-            encoding += str(len(method.bytecode))
-            if method.bytecode:
-                encoding += ':' + str(method.bytecode[0])
-        
+
+            if precision < Precision.IMPLEMENTATION_CHANGE:
+                encoding += str(len(method.bytecode))
+                if method.bytecode:
+                    encoding += ':' + str(method.bytecode[0])
+
         return encoding
+
+    def get_stages(self):
+        return [
+            Precision.PERFECT,
+            Precision.PERFECT,
+            Precision.IMPLEMENTATION_CHANGE,
+            Precision.IMPLEMENTATION_CHANGE,
+            Precision.IMPLEMENTATION_CHANGE
+        ]
